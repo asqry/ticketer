@@ -33,7 +33,7 @@ export default class GuildDelete {
             const guildOwner: User | undefined = client.users.cache.get(guild.ownerId)
             if (!guildOwner) return;
 
-            guildOwner.send({ content: utils.formatMessage(config.messages.goodbye_embed_content, guildOwner, guild, client), embeds: [utils.embed(DiscordEmbedType.SUCCESS, utils.formatMessage(config.messages.goodbye_embed_description, guildOwner, guild, client))] }).catch(err => {
+            guildOwner.send({ embeds: [utils.embed(DiscordEmbedType.SUCCESS, utils.formatMessage(config.messages.goodbye_embed_description, guildOwner, guild, client), { title: utils.formatMessage(config.messages.goodbye_embed_content, guildOwner, guild, client) })] }).catch(err => {
                 utils.log(Log.WARNING, "Couldn't message the Guild Owner.")
             })
         }).catch(err => {

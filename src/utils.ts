@@ -1,4 +1,5 @@
-import axios, { AxiosRequestConfig } from "axios";
+import 'dotenv/config'
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { ChannelType, Client, ColorResolvable, EmbedBuilder, Guild, GuildBasedChannel, GuildMember, GuildTextBasedChannel, PermissionFlagsBits, resolveColor, Role, TextChannel, VoiceChannel } from "discord.js";
 import { Response } from "express";
 import config from "./config";

@@ -8,6 +8,7 @@ export interface Guild {
     updates_channel?: string
     audit_log_channel?: string
     member_role?: string
+    support_team_role?: string
 }
 
 const data: Schema = new Schema<Guild>({
@@ -16,7 +17,8 @@ const data: Schema = new Schema<Guild>({
     ownerId: String,
     updates_channel: { type: String, default: null, required: false },
     audit_log_channel: { type: String, default: null, required: false },
-    member_role: { type: String, default: null, required: false }
+    member_role: { type: String, default: null, required: false },
+    support_team_role: { type: String, default: null, required: false }
 })
 
 const guildsModel = model('guild', data)

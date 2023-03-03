@@ -16,14 +16,14 @@ export default class GuildCreate {
     }
 
     async run(guild: Guild) {
-        let baseURL = process.env.API_URL + '/guilds'
+        let baseURL = process.env.API_URL
         let client = this.client
         if (!client.user || !client.application) return;
 
         let payload: AxiosRequestConfig = {
             method: 'POST',
             baseURL,
-            url: '/create',
+            url: '/guilds/create',
             data: JSON.stringify({
                 id: guild.id
             }),
@@ -36,7 +36,9 @@ export default class GuildCreate {
         axios(payload).then(async (response: AxiosResponse) => {
             let guildOwner: GuildMember = await guild.fetchOwner({ force: true })
 
-            let systemChannel: TextChannel | undefined = await utils.getSystemChannel(guild, client)
+            let systemChannel: TextChannel | undefined = guild.systemChannel ? guild.systemChannel : await utils.getSystemChannel(guild, client)
+
+            if (!systemChannel) return;
 
             systemChannel?.send({ content: utils.formatMessage(config.messages.welcome_embed_content, guildOwner, guild, client), embeds: [utils.embed(DiscordEmbedType.SUCCESS, utils.formatMessage(config.messages.welcome_embed_description, guildOwner, guild, client))] })
 

@@ -18,6 +18,6 @@ export default class Ready {
 
         await client.application.commands.set(Commands)
 
-        utils.log(Log.SUCCESS, `${client.user.tag} is online!`)
+        utils.log(Log.SUCCESS, `${client.user.tag} is online, running in ${client.guilds.cache.size} server${client.guilds.cache.size == 1 ? '' : 's'}!`)
     }
 }

@@ -88,7 +88,7 @@ export const Settings: Command = {
                 let roleMap = map.filter((x: any) => x.key.endsWith('_role')).map((x: any) => `> \`${x.key}\`: ${x.value}\n`).join("")
 
                 interaction.reply({
-                    embeds: [utils.embed(DiscordEmbedType.SUCCESS, `**__Channels__**\n${channelMap}\n\n**__Roles__**\n${roleMap}`, { title: `Config for: \`${interaction.guild?.name}\`` })]
+                    embeds: [utils.embed(DiscordEmbedType.SUCCESS, `**__Channels__**\n${channelMap}\n\n**__Roles__**\n${roleMap}\n\n\\⚙️ *Run </settings set:${interaction.commandId}> to change your settings*`, { title: `Config for: \`${interaction.guild?.name}\`` })]
                 })
             }).catch(err => {
                 interaction.reply({
@@ -175,10 +175,11 @@ export const Settings: Command = {
     autocomplete: async (interaction: AutocompleteInteraction) => {
 
         let focusedOption = interaction.options.getFocused(true)
+        let value = focusedOption.value
 
         if (focusedOption.name === 'option') {
             const choices: string[] = config.configurable_options.settings
-            await interaction.respond(choices.map(choice => ({ name: choice.split('#')[0], value: choice })))
+            await interaction.respond(choices.filter(choice => choice.split('#')[0].split('_').join(" ").match(new RegExp(value, 'gim'))).map(choice => ({ name: choice.split('#')[0], value: choice })))
         }
 
     }

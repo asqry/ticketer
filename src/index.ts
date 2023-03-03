@@ -8,7 +8,7 @@ import { io, Socket } from 'socket.io-client'
 
 import 'dotenv/config'
 import utils, { Log } from './utils'
-import auditLogger from './auditLogger'
+import auditLogger, { ConfigEditLogEntry, PanelCreateEntry } from './auditLogger'
 
 const app: Application = express()
 const client: Client = new Client({ intents: ['Guilds', 'GuildMembers', 'GuildPresences', 'GuildMessages', 'MessageContent'], presence: { activities: [{ name: 'New Tickets', type: ActivityType.Watching }] } })
@@ -55,10 +55,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 })
 
 ios.on("connection", s => {
-    utils.log(Log.NEUTRAL, "New socket connection")
+    utils.log(Log.SUCCESS, "Initialized Socket 🔌")
 
-    s.on("guild_option_edit", async (data) => {
+    s.on("guild_option_edit", async (data: ConfigEditLogEntry) => {
         await auditLogger.logConfigEdit(client, data)
+    })
+
+    s.on("panel_create", async (data: PanelCreateEntry) => {
+        await auditLogger.logPanelCreate(client, data)
     })
 })
 
@@ -66,7 +70,7 @@ app.use('/guilds', require("./server/routes/guilds"))
 
 app.listen(process.env.SERVER_PORT, () => {
     mongoose.set('strictQuery', true)
-    mongoose.connect(process.env.MONGO_URI as string, {}, () => {
+    mongoose.connect(process.env.MONGO_URI as string).then(() => {
         utils.log(Log.SUCCESS, `DB connected to ${mongoose.connection.host}:${mongoose.connection.port}`)
     })
     utils.log(Log.SUCCESS, `Listening to http://localhost:${process.env.SERVER_PORT}`)

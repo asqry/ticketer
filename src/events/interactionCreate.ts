@@ -31,6 +31,12 @@ const handleSlashCommand = async (client: Client, interaction: CommandInteractio
     return;
   }
 
+  if (!interaction.guild) {
+    console.log()
+    interaction.reply({ content: `Commands in DMs are not supported. Please re-run this command in a server. \n\n**Command Ran**: </${interaction.commandName} ${interaction.options.data[0].name}:${interaction.command?.id}>` });
+    return;
+  }
+
   // await interaction.deferReply({ ephemeral: true })
 
   command.run(client, interaction)

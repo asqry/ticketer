@@ -4,6 +4,8 @@ import express, { Request, Response, Router } from 'express'
 import { Document, Model } from 'mongoose';
 import utils, { HttpCode } from '../../utils';
 import guild, { Guild } from '../models/guild'
+import rs from "random-string"
+import panel, { Panel } from '../models/panel';
 const router: Router = express.Router();
 
 interface ApiGuild {
@@ -13,6 +15,40 @@ interface ApiGuild {
 interface ApiConfig {
     value: string,
     editedBy: string
+}
+
+
+interface ApiTicket {
+    id: string
+    type: number
+    panelId: string
+    channelId: string
+    ownerId: string
+    adjustable: boolean
+    claimable: boolean
+}
+interface ApiPanel {
+    id: string
+    guildId: string
+    embedChannelId: string
+    ticketParentId: string
+    defaultRoleId: string
+    raisedRoleId?: string
+    color?: string
+    name?: string
+    image?: string
+    createdBy: string
+    tickets: ApiTicket[]
+}
+
+// function isApiPanel(obj: any): obj is ApiPanel {
+//     return obj !== undefined
+// }
+
+function generateId(): string {
+
+    let id = rs({ length: 12, special: false, numeric: true, letters: true })
+    return id;
 }
 
 async function auth(req: Request): Promise<boolean> {
@@ -172,6 +208,38 @@ router.delete('/delete/:id', async (req: Request, res: Response) => {
     }).catch(err => {
         return utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, { message: 'Failed to delete guild.' })
     })
+})
+
+router.post('/:id/panels/create', async (req: Request, res: Response) => {
+    let isAuthed: boolean = await auth(req);
+    const guildId: string = req.params.id
+    const payload: ApiPanel = req.body
+    const panelId = generateId()
+
+    if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
+    if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload || !payload.embedChannelId || !payload.ticketParentId || !payload.createdBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+
+    const apiGuild: Guild | null = await guild.findOne({ id: guildId })
+
+    if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
+    if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
+
+    payload.id = generateId()
+    payload.guildId = apiGuild.id
+    if (!payload.defaultRoleId) payload.defaultRoleId = apiGuild.support_team_role
+
+    let newPanel = new panel(payload)
+
+    newPanel.save().then((document) => {
+        utils.apiResponse(HttpCode.OK, res, document)
+        res.locals.socket.emit("panel_create", { ...payload })
+    }).catch(err => {
+        utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, err)
+    })
+
+
+
 })
 
 

@@ -1,39 +1,51 @@
 import { Schema, model } from 'mongoose'
+import config from '../../config'
 
-interface Ticket {
+export interface Ticket {
     id: string
+    type: number
+    panelId: string
     channelId: string
-    parentId: string
     ownerId: string
-    raisable: boolean
+    claimeeId: string
+    adjustable: boolean
     raised: boolean
+    claimable: boolean
+    claimed: boolean
 }
 
-interface Panel {
+export interface Panel {
     id: string
     guildId: string
-    defaultRoleId: string
+    embedChannelId: string
+    ticketParentId: string
+    defaultRoleId?: string
     raisedRoleId?: string
+    color?: string
+    name?: string
+    image?: string
     tickets: Ticket[]
 }
 
 const data: Schema = new Schema<Panel>({
-    id: {
-        required: true
+    id: String,
+    guildId: String,
+    embedChannelId: String,
+    ticketParentId: String,
+    defaultRoleId: String,
+    raisedRoleId: String,
+    color: {
+        type: String,
+        default: config.branding.embed.colors.neutral
     },
-    guildId: {
-        required: true
+    name: {
+        type: String,
+        default: "Ticket Panel"
     },
-    defaultRoleId: {
-        required: true
+    image: {
+        type: String
     },
-    raisedRoleId: {
-        required: false
-    },
-    tickets: {
-        required: true,
-        default: []
-    }
+    tickets: []
 })
 
 const panelsModel = model('panel', data)
