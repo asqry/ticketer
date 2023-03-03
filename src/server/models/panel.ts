@@ -17,10 +17,10 @@ export interface Ticket {
 export interface Panel {
     id: string
     guildId: string
-    embedChannelId: string
-    ticketParentId: string
-    defaultRoleId?: string
-    raisedRoleId?: string
+    embedChannel: string
+    ticketParentChannel: string
+    defaultRole?: string
+    raisedRole?: string
     color?: string
     name?: string
     image?: string
@@ -30,10 +30,10 @@ export interface Panel {
 const data: Schema = new Schema<Panel>({
     id: String,
     guildId: String,
-    embedChannelId: String,
-    ticketParentId: String,
-    defaultRoleId: String,
-    raisedRoleId: String,
+    embedChannel: String,
+    ticketParentChannel: String,
+    defaultRole: String,
+    raisedRole: String,
     color: {
         type: String,
         default: config.branding.embed.colors.neutral

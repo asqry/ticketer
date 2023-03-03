@@ -30,15 +30,19 @@ interface ApiTicket {
 interface ApiPanel {
     id: string
     guildId: string
-    embedChannelId: string
-    ticketParentId: string
-    defaultRoleId: string
-    raisedRoleId?: string
+    embedChannel: string
+    ticketParentChannel: string
+    defaultRole: string
+    raisedRole?: string
     color?: string
     name?: string
     image?: string
     createdBy: string
     tickets: ApiTicket[]
+}
+
+interface ApiPanelEdit extends ApiPanel {
+    editedBy: string
 }
 
 // function isApiPanel(obj: any): obj is ApiPanel {
@@ -218,7 +222,7 @@ router.post('/:id/panels/create', async (req: Request, res: Response) => {
 
     if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
     if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
-    if (!payload || !payload.embedChannelId || !payload.ticketParentId || !payload.createdBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload || !payload.embedChannel || !payload.ticketParentChannel || !payload.createdBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
 
     const apiGuild: Guild | null = await guild.findOne({ id: guildId })
 
@@ -227,7 +231,7 @@ router.post('/:id/panels/create', async (req: Request, res: Response) => {
 
     payload.id = generateId()
     payload.guildId = apiGuild.id
-    if (!payload.defaultRoleId) payload.defaultRoleId = apiGuild.support_team_role
+    if (!payload.defaultRole) payload.defaultRole = apiGuild.support_team_role
 
     let newPanel = new panel(payload)
 
@@ -237,9 +241,39 @@ router.post('/:id/panels/create', async (req: Request, res: Response) => {
     }).catch(err => {
         utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, err)
     })
+})
 
+router.patch('/:id/panels/:panelId', async (req: Request, res: Response) => {
+    let isAuthed: boolean = await auth(req);
+    const guildId: string = req.params.id
+    const panelId: string = req.params.panelId
+    const payload: ApiPanelEdit = req.body
 
+    if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
+    if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!panelId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload || !payload.editedBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
 
+    const apiGuild: Guild | null = await guild.findOne({ id: guildId })
+
+    if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
+    if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
+
+    const apiPanel = await panel.findOne({ guildId: guildId, id: panelId })
+    if (!apiPanel) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' })
+
+    let oldApiPanel = JSON.stringify(apiPanel)
+
+    Object.entries(payload).forEach(entry => {
+        apiPanel[entry[0]] = entry[1]
+    })
+
+    apiPanel.save().then((document) => {
+        utils.apiResponse(HttpCode.OK, res, document)
+        res.locals.socket.emit("panel_edit", { id: panelId, guildId: guildId, editedBy: payload.editedBy, data: { oldValue: JSON.parse(oldApiPanel), newValue: apiPanel, changedEntries: Object.keys(payload).filter((x: string) => x !== "editedBy") } })
+    }).catch(err => {
+        utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, err)
+    })
 })
 
 

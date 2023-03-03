@@ -8,7 +8,7 @@ import { io, Socket } from 'socket.io-client'
 
 import 'dotenv/config'
 import utils, { Log } from './utils'
-import auditLogger, { ConfigEditLogEntry, PanelCreateEntry } from './auditLogger'
+import auditLogger, { ConfigEditLogEntry, PanelCreateEntry, PanelEditEntry } from './auditLogger'
 
 const app: Application = express()
 const client: Client = new Client({ intents: ['Guilds', 'GuildMembers', 'GuildPresences', 'GuildMessages', 'MessageContent'], presence: { activities: [{ name: 'New Tickets', type: ActivityType.Watching }] } })
@@ -63,6 +63,12 @@ ios.on("connection", s => {
 
     s.on("panel_create", async (data: PanelCreateEntry) => {
         await auditLogger.logPanelCreate(client, data)
+    })
+
+    s.on("panel_edit", async (data: PanelEditEntry) => {
+        // console.log(data.data.changedEntries)
+        // console.log("DATA", data)
+        await auditLogger.logPanelEdit(client, data)
     })
 })
 
