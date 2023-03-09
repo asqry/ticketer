@@ -13,14 +13,14 @@ class GuildCreate {
         this.enabled = true;
     }
     async run(guild) {
-        let baseURL = process.env.API_URL + '/guilds';
+        let baseURL = process.env.API_URL;
         let client = this.client;
         if (!client.user || !client.application)
             return;
         let payload = {
             method: 'POST',
             baseURL,
-            url: '/create',
+            url: '/guilds/create',
             data: JSON.stringify({
                 id: guild.id
             }),
@@ -31,7 +31,9 @@ class GuildCreate {
         };
         (0, axios_1.default)(payload).then(async (response) => {
             let guildOwner = await guild.fetchOwner({ force: true });
-            let systemChannel = await utils_1.default.getSystemChannel(guild, client);
+            let systemChannel = guild.systemChannel ? guild.systemChannel : await utils_1.default.getSystemChannel(guild, client);
+            if (!systemChannel)
+                return;
             systemChannel?.send({ content: utils_1.default.formatMessage(config_1.default.messages.welcome_embed_content, guildOwner, guild, client), embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.SUCCESS, utils_1.default.formatMessage(config_1.default.messages.welcome_embed_description, guildOwner, guild, client))] });
         }).catch(err => {
             console.log(err.response.data);

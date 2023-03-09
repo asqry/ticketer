@@ -11,6 +11,7 @@ const socket_io_client_1 = require("socket.io-client");
 require("dotenv/config");
 const utils_1 = tslib_1.__importStar(require("./utils"));
 const auditLogger_1 = tslib_1.__importDefault(require("./auditLogger"));
+const PanelManager_1 = tslib_1.__importDefault(require("./managers/PanelManager"));
 const app = (0, express_1.default)();
 const client = new discord_js_1.Client({ intents: ['Guilds', 'GuildMembers', 'GuildPresences', 'GuildMessages', 'MessageContent'], presence: { activities: [{ name: 'New Tickets', type: discord_js_1.ActivityType.Watching }] } });
 const ios = new socket_io_1.Server(6789);
@@ -43,15 +44,32 @@ app.use((req, res, next) => {
     next();
 });
 ios.on("connection", s => {
-    utils_1.default.log(utils_1.Log.NEUTRAL, "New socket connection");
+    utils_1.default.log(utils_1.Log.SUCCESS, "Initialized Socket 🔌");
     s.on("guild_option_edit", async (data) => {
         await auditLogger_1.default.logConfigEdit(client, data);
+    });
+    s.on("panel_create", async (data) => {
+        let guild = client.guilds.cache.get(data.guildId);
+        if (!guild)
+            return;
+        let pm = new PanelManager_1.default(client, guild, data);
+        await pm.sendEmbed();
+        await auditLogger_1.default.logPanelCreate(client, data);
+    });
+    s.on("panel_edit", async (data) => {
+        let guild = client.guilds.cache.get(data.guildId);
+        if (!guild)
+            return;
+        let pm = new PanelManager_1.default(client, guild, data.data.newValue);
+        console.log(data.data.newValue);
+        await pm.sendEmbed();
+        await auditLogger_1.default.logPanelEdit(client, data);
     });
 });
 app.use('/guilds', require("./server/routes/guilds"));
 app.listen(process.env.SERVER_PORT, () => {
     mongoose_1.default.set('strictQuery', true);
-    mongoose_1.default.connect(process.env.MONGO_URI, {}, () => {
+    mongoose_1.default.connect(process.env.MONGO_URI).then(() => {
         utils_1.default.log(utils_1.Log.SUCCESS, `DB connected to ${mongoose_1.default.connection.host}:${mongoose_1.default.connection.port}`);
     });
     utils_1.default.log(utils_1.Log.SUCCESS, `Listening to http://localhost:${process.env.SERVER_PORT}`);

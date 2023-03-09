@@ -1,9 +1,8 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+exports.__esModule = true;
 exports.TicketType = void 0;
-const tslib_1 = require("tslib");
-const mongoose_1 = require("mongoose");
-const config_1 = tslib_1.__importDefault(require("../../config"));
+var mongoose_1 = require("mongoose");
+var config_1 = require("../../config");
 var TicketType;
 (function (TicketType) {
     TicketType[TicketType["NORMAL_UNRAISABLE_UNCLAIMABLE"] = 1] = "NORMAL_UNRAISABLE_UNCLAIMABLE";
@@ -15,7 +14,7 @@ var TicketType;
     TicketType[TicketType["ADMIN_RAISABLE_UNCLAIMABLE"] = 7] = "ADMIN_RAISABLE_UNCLAIMABLE";
     TicketType[TicketType["ADMIN_RAISABLE_CLAIMABLE"] = 8] = "ADMIN_RAISABLE_CLAIMABLE";
 })(TicketType = exports.TicketType || (exports.TicketType = {}));
-const data = new mongoose_1.Schema({
+var data = new mongoose_1.Schema({
     id: String,
     guildId: String,
     embedChannel: String,
@@ -25,11 +24,11 @@ const data = new mongoose_1.Schema({
     embedMessage: String,
     color: {
         type: String,
-        default: config_1.default.branding.embed.colors.neutral
+        "default": config_1["default"].branding.embed.colors.neutral
     },
     name: {
         type: String,
-        default: "Ticket Panel"
+        "default": "Ticket Panel"
     },
     image: {
         type: String
@@ -37,5 +36,5 @@ const data = new mongoose_1.Schema({
     ticketTypes: [],
     tickets: []
 });
-const panelsModel = (0, mongoose_1.model)('panel', data);
-exports.default = panelsModel;
+var panelsModel = (0, mongoose_1.model)('panel', data);
+exports["default"] = panelsModel;

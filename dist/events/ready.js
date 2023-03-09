@@ -15,7 +15,7 @@ class Ready {
         if (!client.user || !client.application)
             return;
         await client.application.commands.set(commands_1.Commands);
-        utils_1.default.log(utils_1.Log.SUCCESS, `${client.user.tag} is online!`);
+        utils_1.default.log(utils_1.Log.SUCCESS, `${client.user.tag} is online, running in ${client.guilds.cache.size} server${client.guilds.cache.size == 1 ? '' : 's'}!`);
     }
 }
 exports.default = Ready;

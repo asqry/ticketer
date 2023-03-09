@@ -33,9 +33,10 @@ interface ApiPanel {
     embedChannel: string
     ticketParentChannel: string
     defaultRole: string
+    embedMessage: string
     raisedRole?: string
-    color?: string
-    name?: string
+    color: string
+    name: string
     image?: string
     createdBy: string
     tickets: ApiTicket[]
@@ -214,6 +215,40 @@ router.delete('/delete/:id', async (req: Request, res: Response) => {
     })
 })
 
+router.get('/:id/panels', async (req: Request, res: Response) => {
+    let isAuthed: boolean = await auth(req);
+    const guildId: string = req.params.id
+
+    if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
+    if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+
+    const apiGuild: Guild | null = await guild.findOne({ id: guildId })
+
+    if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
+
+    const apiPanels = await panel.find({ guildId: guildId })
+    if (!apiPanels || apiPanels.length <= 0) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: `No panels exist for guild ${apiGuild.id}.` })
+
+    return utils.apiResponse(HttpCode.OK, res, apiPanels)
+})
+
+router.get('/:id/panels/:panelId', async (req: Request, res: Response) => {
+    let isAuthed: boolean = await auth(req);
+    const guildId: string = req.params.id
+    const panelId: string = req.params.panelId
+
+    if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
+    if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+
+    const apiGuild: Guild | null = await guild.findOne({ id: guildId })
+    if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
+
+    const apiPanel = await panel.findOne({ guildId: guildId, id: panelId })
+    if (!apiPanel) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' })
+
+    return utils.apiResponse(HttpCode.OK, res, apiPanel)
+})
+
 router.post('/:id/panels/create', async (req: Request, res: Response) => {
     let isAuthed: boolean = await auth(req);
     const guildId: string = req.params.id
@@ -229,7 +264,7 @@ router.post('/:id/panels/create', async (req: Request, res: Response) => {
     if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
     if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
 
-    payload.id = generateId()
+    payload.id = panelId
     payload.guildId = apiGuild.id
     if (!payload.defaultRole) payload.defaultRole = apiGuild.support_team_role
 
@@ -276,6 +311,31 @@ router.patch('/:id/panels/:panelId', async (req: Request, res: Response) => {
     })
 })
 
+router.delete('/:id/panels/:panelId', async (req: Request, res: Response) => {
+    let isAuthed: boolean = await auth(req);
+    const guildId: string = req.params.id
+    const panelId: string = req.params.panelId
+
+    if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
+    if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!panelId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+
+    const apiGuild: Guild | null = await guild.findOne({ id: guildId })
+
+    if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
+
+    const apiPanel = await panel.findOne({ guildId: guildId, id: panelId })
+    if (!apiPanel) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' })
+
+    apiPanel.deleteOne({ guildId: guildId, id: panelId }).then((document) => {
+        utils.apiResponse(HttpCode.OK, res, document)
+        res.locals.socket.emit("panel_delete", apiPanel)
+    }).catch(err => {
+        utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, err)
+    })
+
+
+})
 
 
 module.exports = router;

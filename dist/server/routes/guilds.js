@@ -5,7 +5,13 @@ require("dotenv/config");
 const express_1 = tslib_1.__importDefault(require("express"));
 const utils_1 = tslib_1.__importStar(require("../../utils"));
 const guild_1 = tslib_1.__importDefault(require("../models/guild"));
+const random_string_1 = tslib_1.__importDefault(require("random-string"));
+const panel_1 = tslib_1.__importDefault(require("../models/panel"));
 const router = express_1.default.Router();
+function generateId() {
+    let id = (0, random_string_1.default)({ length: 12, special: false, numeric: true, letters: true });
+    return id;
+}
 async function auth(req) {
     let authKey = req.headers['x-auth-token'];
     if (!authKey || authKey !== process.env.TOKEN) {
@@ -134,6 +140,120 @@ router.delete('/delete/:id', async (req, res) => {
         utils_1.default.apiResponse(utils_1.HttpCode.OK, res);
     }).catch(err => {
         return utils_1.default.apiResponse(utils_1.HttpCode.INTERNAL_SERVER_ERROR, res, { message: 'Failed to delete guild.' });
+    });
+});
+router.get('/:id/panels', async (req, res) => {
+    let isAuthed = await auth(req);
+    const guildId = req.params.id;
+    if (!isAuthed)
+        return utils_1.default.apiResponse(utils_1.HttpCode.UNAUTHORIZED, res);
+    if (!guildId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    const apiGuild = await guild_1.default.findOne({ id: guildId });
+    if (!apiGuild)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' });
+    const apiPanels = await panel_1.default.find({ guildId: guildId });
+    if (!apiPanels || apiPanels.length <= 0)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: `No panels exist for guild ${apiGuild.id}.` });
+    return utils_1.default.apiResponse(utils_1.HttpCode.OK, res, apiPanels);
+});
+router.get('/:id/panels/:panelId', async (req, res) => {
+    let isAuthed = await auth(req);
+    const guildId = req.params.id;
+    const panelId = req.params.panelId;
+    if (!isAuthed)
+        return utils_1.default.apiResponse(utils_1.HttpCode.UNAUTHORIZED, res);
+    if (!guildId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    const apiGuild = await guild_1.default.findOne({ id: guildId });
+    if (!apiGuild)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' });
+    const apiPanel = await panel_1.default.findOne({ guildId: guildId, id: panelId });
+    if (!apiPanel)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' });
+    return utils_1.default.apiResponse(utils_1.HttpCode.OK, res, apiPanel);
+});
+router.post('/:id/panels/create', async (req, res) => {
+    let isAuthed = await auth(req);
+    const guildId = req.params.id;
+    const payload = req.body;
+    const panelId = generateId();
+    if (!isAuthed)
+        return utils_1.default.apiResponse(utils_1.HttpCode.UNAUTHORIZED, res);
+    if (!guildId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    if (!payload || !payload.embedChannel || !payload.ticketParentChannel || !payload.createdBy)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    const apiGuild = await guild_1.default.findOne({ id: guildId });
+    if (!apiGuild)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' });
+    if (!apiGuild.support_team_role)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' });
+    payload.id = panelId;
+    payload.guildId = apiGuild.id;
+    if (!payload.defaultRole)
+        payload.defaultRole = apiGuild.support_team_role;
+    let newPanel = new panel_1.default(payload);
+    newPanel.save().then((document) => {
+        utils_1.default.apiResponse(utils_1.HttpCode.OK, res, document);
+        res.locals.socket.emit("panel_create", { ...payload });
+    }).catch(err => {
+        utils_1.default.apiResponse(utils_1.HttpCode.INTERNAL_SERVER_ERROR, res, err);
+    });
+});
+router.patch('/:id/panels/:panelId', async (req, res) => {
+    let isAuthed = await auth(req);
+    const guildId = req.params.id;
+    const panelId = req.params.panelId;
+    const payload = req.body;
+    if (!isAuthed)
+        return utils_1.default.apiResponse(utils_1.HttpCode.UNAUTHORIZED, res);
+    if (!guildId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    if (!panelId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    if (!payload || !payload.editedBy)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    const apiGuild = await guild_1.default.findOne({ id: guildId });
+    if (!apiGuild)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' });
+    if (!apiGuild.support_team_role)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' });
+    const apiPanel = await panel_1.default.findOne({ guildId: guildId, id: panelId });
+    if (!apiPanel)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' });
+    let oldApiPanel = JSON.stringify(apiPanel);
+    Object.entries(payload).forEach(entry => {
+        apiPanel[entry[0]] = entry[1];
+    });
+    apiPanel.save().then((document) => {
+        utils_1.default.apiResponse(utils_1.HttpCode.OK, res, document);
+        res.locals.socket.emit("panel_edit", { id: panelId, guildId: guildId, editedBy: payload.editedBy, data: { oldValue: JSON.parse(oldApiPanel), newValue: apiPanel, changedEntries: Object.keys(payload).filter((x) => x !== "editedBy") } });
+    }).catch(err => {
+        utils_1.default.apiResponse(utils_1.HttpCode.INTERNAL_SERVER_ERROR, res, err);
+    });
+});
+router.delete('/:id/panels/:panelId', async (req, res) => {
+    let isAuthed = await auth(req);
+    const guildId = req.params.id;
+    const panelId = req.params.panelId;
+    if (!isAuthed)
+        return utils_1.default.apiResponse(utils_1.HttpCode.UNAUTHORIZED, res);
+    if (!guildId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    if (!panelId)
+        return utils_1.default.apiResponse(utils_1.HttpCode.BAD_REQUEST, res);
+    const apiGuild = await guild_1.default.findOne({ id: guildId });
+    if (!apiGuild)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' });
+    const apiPanel = await panel_1.default.findOne({ guildId: guildId, id: panelId });
+    if (!apiPanel)
+        return utils_1.default.apiResponse(utils_1.HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' });
+    apiPanel.deleteOne({ guildId: guildId, id: panelId }).then((document) => {
+        utils_1.default.apiResponse(utils_1.HttpCode.OK, res, document);
+        res.locals.socket.emit("panel_delete", apiPanel);
+    }).catch(err => {
+        utils_1.default.apiResponse(utils_1.HttpCode.INTERNAL_SERVER_ERROR, res, err);
     });
 });
 module.exports = router;

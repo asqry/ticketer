@@ -7,7 +7,8 @@ const data = new mongoose_1.Schema({
     ownerId: String,
     updates_channel: { type: String, default: null, required: false },
     audit_log_channel: { type: String, default: null, required: false },
-    member_role: { type: String, default: null, required: false }
+    member_role: { type: String, default: null, required: false },
+    support_team_role: { type: String, default: null, required: false }
 });
 const guildsModel = (0, mongoose_1.model)('guild', data);
 exports.default = guildsModel;

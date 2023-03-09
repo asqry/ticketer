@@ -1,4 +1,4 @@
-import { ActivityType, Client } from 'discord.js'
+import { ActivityType, Client, Guild } from 'discord.js'
 import fs from "fs"
 import express, { Application, NextFunction, Request, Response } from "express"
 import mongoose from 'mongoose'
@@ -9,6 +9,7 @@ import { io, Socket } from 'socket.io-client'
 import 'dotenv/config'
 import utils, { Log } from './utils'
 import auditLogger, { ConfigEditLogEntry, PanelCreateEntry, PanelEditEntry } from './auditLogger'
+import PanelManager from './managers/PanelManager'
 
 const app: Application = express()
 const client: Client = new Client({ intents: ['Guilds', 'GuildMembers', 'GuildPresences', 'GuildMessages', 'MessageContent'], presence: { activities: [{ name: 'New Tickets', type: ActivityType.Watching }] } })
@@ -62,12 +63,21 @@ ios.on("connection", s => {
     })
 
     s.on("panel_create", async (data: PanelCreateEntry) => {
+        let guild: Guild | undefined = client.guilds.cache.get(data.guildId)
+        if (!guild) return;
+        let pm = new PanelManager(client, guild, data)
+
+        await pm.sendEmbed()
         await auditLogger.logPanelCreate(client, data)
     })
 
     s.on("panel_edit", async (data: PanelEditEntry) => {
-        // console.log(data.data.changedEntries)
-        // console.log("DATA", data)
+        let guild: Guild | undefined = client.guilds.cache.get(data.guildId)
+        if (!guild) return;
+        let pm = new PanelManager(client, guild, data.data.newValue)
+        console.log(data.data.newValue)
+
+        await pm.sendEmbed()
         await auditLogger.logPanelEdit(client, data)
     })
 })

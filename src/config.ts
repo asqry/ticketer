@@ -35,7 +35,10 @@ export default {
         welcome_embed_content: "👋 %u_user, thank you for adding %cu_tag!",
         welcome_embed_description: "For a list of commands, run </hello:1079419220925886515>",
         goodbye_embed_content: "👋",
-        goodbye_embed_description: 'We\'ll miss you!\n\nIf you ever change your mind, feel free to [add me back to %g_name](https://discord.com/api/oauth2/authorize?client_id=1079418317166612561&permissions=8&scope=bot%20applications.commands&guild_id=%g_id "Click to add %cu_username to %g_name") any time.'
+        goodbye_embed_description: 'We\'ll miss you!\n\nIf you ever change your mind, feel free to [add me back to %g_name](https://discord.com/api/oauth2/authorize?client_id=1079418317166612561&permissions=8&scope=bot%20applications.commands&guild_id=%g_id "Click to add %cu_username to %g_name") any time.',
+        panel_embed_send_emoji: "📨",
+        panel_embed_edit_emoji: "📝",
+        panel_embed_delete_emoji: "🗑️"
     },
     channels: {
         verify_channel: '1028469834234724402'

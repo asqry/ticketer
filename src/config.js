@@ -1,6 +1,6 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = {
+exports.__esModule = true;
+exports["default"] = {
     branding: {
         embed: {
             colors: {
@@ -10,6 +10,10 @@ exports.default = {
                 error: 'C34A36'
             },
             titles: {
+                // neutral: '🎟️ Ticketer',
+                // success: '✅ Success!',
+                // warning: '⚠️',
+                // error: '🚫 Oh no!'
                 neutral: '',
                 success: '',
                 warning: '',
@@ -18,6 +22,16 @@ exports.default = {
         }
     },
     modules: {},
+    /*
+        Messages support placeholders:
+        u: user (will default to the guild owner)
+        g: guild
+        c: client
+        cu: client user
+        user will always be the user that initiated the interaction
+        format: %object_property
+        example: '%g_ownerId' = guild.ownerId
+    */
     messages: {
         welcome_embed_content: "👋 %u_user, thank you for adding %cu_tag!",
         welcome_embed_description: "For a list of commands, run </hello:1079419220925886515>",

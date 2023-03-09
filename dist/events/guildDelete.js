@@ -29,7 +29,7 @@ class GuildDelete {
             const guildOwner = client.users.cache.get(guild.ownerId);
             if (!guildOwner)
                 return;
-            guildOwner.send({ content: utils_1.default.formatMessage(config_1.default.messages.goodbye_embed_content, guildOwner, guild, client), embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.SUCCESS, utils_1.default.formatMessage(config_1.default.messages.goodbye_embed_description, guildOwner, guild, client))] }).catch(err => {
+            guildOwner.send({ embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.SUCCESS, utils_1.default.formatMessage(config_1.default.messages.goodbye_embed_description, guildOwner, guild, client), { title: utils_1.default.formatMessage(config_1.default.messages.goodbye_embed_content, guildOwner, guild, client) })] }).catch(err => {
                 utils_1.default.log(utils_1.Log.WARNING, "Couldn't message the Guild Owner.");
             });
         }).catch(err => {

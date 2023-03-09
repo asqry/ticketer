@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HttpCode = exports.DiscordEmbedType = exports.Log = void 0;
 const tslib_1 = require("tslib");
+require("dotenv/config");
 const axios_1 = tslib_1.__importDefault(require("axios"));
 const discord_js_1 = require("discord.js");
 const config_1 = tslib_1.__importDefault(require("./config"));
+const PanelManager_1 = tslib_1.__importDefault(require("./managers/PanelManager"));
 var Log;
 (function (Log) {
     Log["ERROR"] = "error";
@@ -113,12 +115,18 @@ exports.default = {
         };
         if (options?.thumbnail)
             builder.thumbnail = { url: options.thumbnail };
+        if (options?.footer)
+            builder.footer = { text: options.thumbnail };
         if (options?.timestamp)
             builder.timestamp = options.timestamp;
         if (options?.title)
             builder.title = options.title;
         if (options?.fields)
             builder.fields = options.fields;
+        if (options?.image)
+            builder.image = options.image;
+        if (options?.color)
+            builder.color = (0, discord_js_1.resolveColor)(options.color);
         return discord_js_1.EmbedBuilder.from(builder);
     },
     formatMessage(message, member, guild, client) {
@@ -142,5 +150,30 @@ exports.default = {
     },
     getSystemChannel(guild, client) {
         return guild.channels.cache.filter(channel => channel.type === discord_js_1.ChannelType.GuildText && channel.permissionsFor(guild.members.cache.find(m => m.id === client.user?.id)).has(discord_js_1.PermissionFlagsBits.SendMessages)).first();
+    },
+    patchPanelMessages(guild, client) {
+        let payload = {
+            method: "GET",
+            baseURL: process.env.API_URL,
+            url: `/guilds/${guild.id}/panels`,
+            headers: {
+                'x-auth-token': process.env.TOKEN,
+            }
+        };
+        (0, axios_1.default)(payload).then(response => {
+            let data = response.data.data.data;
+            if (!data || data.length <= 0)
+                console.log(`Guild ${guild.id} has no panels. Tried to patch but couldn't.`);
+            data.forEach(async (panel) => {
+                if (!panel.embedMessage) {
+                    let pm = new PanelManager_1.default(client, guild, panel);
+                    await pm.sendEmbed();
+                }
+                if (panel.embedMessage)
+                    return;
+            });
+        }).catch(err => {
+            console.log(`Guild ${guild.id} has no panels. Tried to patch but couldn't.`);
+        });
     }
 };

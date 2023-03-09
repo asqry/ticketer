@@ -3,6 +3,8 @@ import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { ChannelType, Client, ColorResolvable, EmbedBuilder, Guild, GuildBasedChannel, GuildMember, GuildTextBasedChannel, PermissionFlagsBits, resolveColor, Role, TextChannel, VoiceChannel } from "discord.js";
 import { Response } from "express";
 import config from "./config";
+import { Panel } from './server/models/panel';
+import PanelManager from './managers/PanelManager';
 
 export enum Log {
     ERROR = 'error',
@@ -32,11 +34,18 @@ export interface DiscordEmbedField {
     inline?: boolean | false
 }
 
+export interface DiscordEmbedImage {
+    url: string,
+}
+
 export interface DiscordEmbedOptions {
     thumbnail?: string
     timestamp?: string
     title?: string
+    image?: DiscordEmbedImage
+    color?: string
     fields?: DiscordEmbedField[]
+    footer?: string
 }
 
 
@@ -141,9 +150,12 @@ export default {
         }
 
         if (options?.thumbnail) builder.thumbnail = { url: options.thumbnail }
+        if (options?.footer) builder.footer = { text: options.thumbnail }
         if (options?.timestamp) builder.timestamp = options.timestamp
         if (options?.title) builder.title = options.title
         if (options?.fields) builder.fields = options.fields
+        if (options?.image) builder.image = options.image
+        if (options?.color) builder.color = resolveColor(options.color as ColorResolvable)
 
         return EmbedBuilder.from(builder);
     },
@@ -178,5 +190,33 @@ export default {
     getSystemChannel(guild: Guild, client: Client): TextChannel | undefined {
         // return guild.channels.cache.filter(channel => channel.type === ChannelType.GuildText).last();
         return guild.channels.cache.filter(channel => channel.type === ChannelType.GuildText && channel.permissionsFor(guild.members.cache.find(m => m.id === client.user?.id) as GuildMember).has(PermissionFlagsBits.SendMessages)).first() as TextChannel
+    },
+
+    patchPanelMessages(guild: Guild, client: Client): void {
+        let payload: AxiosRequestConfig = {
+            method: "GET",
+            baseURL: process.env.API_URL,
+            url: `/guilds/${guild.id}/panels`,
+            headers: {
+                'x-auth-token': process.env.TOKEN,
+            }
+        }
+
+        axios(payload).then(response => {
+            let data: Panel[] = response.data.data.data
+            if (!data || data.length <= 0) console.log(`Guild ${guild.id} has no panels. Tried to patch but couldn't.`)
+
+            data.forEach(async (panel: Panel) => {
+                if (!panel.embedMessage) {
+                    let pm = new PanelManager(client, guild, panel)
+                    await pm.sendEmbed()
+                }
+                if (panel.embedMessage) return
+            })
+
+
+        }).catch(err => {
+            console.log(`Guild ${guild.id} has no panels. Tried to patch but couldn't.`)
+        })
     }
 }
