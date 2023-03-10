@@ -1,11 +1,12 @@
 import 'dotenv/config'
-import { Client, Interaction, CommandInteraction, AutocompleteInteraction, ButtonInteraction, PermissionFlagsBits, OverwriteType } from 'discord.js';
+import { Client, Interaction, CommandInteraction, AutocompleteInteraction, ButtonInteraction, PermissionFlagsBits, OverwriteType, Guild } from 'discord.js';
 import { Command } from '../interfaces/command';
 import { Commands } from '../commands';
 import utils, { DiscordEmbedType } from '../utils';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Panel } from '../server/models/panel';
 import rs from "random-string"
+import PanelManager from '../managers/PanelManager';
 
 
 
@@ -107,6 +108,45 @@ const handleButtonPress = async (client: Client, interaction: ButtonInteraction)
       })
 
 
+    } else if (customId.startsWith("send-")) {
+      let parsedPanel = customId.split("-")
+      let action = parsedPanel[0]
+      let panelId = parsedPanel[1]
+      let ticketType = parsedPanel[2]
+      let ticketName = parsedPanel[3]
+
+
+      let payload: AxiosRequestConfig = {
+        method: 'GET',
+        baseURL,
+        url: `/guilds/${interaction.guildId}/panels/${panelId}`,
+        headers: {
+          'x-auth-token': process.env.TOKEN,
+          'Content-Type': 'application/json'
+        },
+      }
+
+      axios(payload).then(async response => {
+        let panel: Panel = response.data.data.data
+        if (!panel) return interaction.reply({
+          ephemeral: true,
+          embeds: [utils.embed(DiscordEmbedType.ERROR, `An error occured. Please contact support.`)]
+        })
+        let pm = new PanelManager(client, interaction.guild as Guild, panel)
+
+        pm.sendEmbed().then(() => {
+          interaction.reply({ ephemeral: true, embeds: [utils.embed(DiscordEmbedType.SUCCESS, `Successfully sent embed for panel \`${panel.id}\` in <#${panel.embedChannel}>`)] })
+        }).catch(err => {
+          interaction.reply({ ephemeral: true, embeds: [utils.embed(DiscordEmbedType.ERROR, `Failed to send embed.`)] })
+
+        })
+
+      }).catch(async err => {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [utils.embed(DiscordEmbedType.ERROR, `An error occured. Please contact support.`)]
+        })
+      })
     }
   }
 }

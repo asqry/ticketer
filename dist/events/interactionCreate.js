@@ -7,6 +7,7 @@ const commands_1 = require("../commands");
 const utils_1 = tslib_1.__importStar(require("../utils"));
 const axios_1 = tslib_1.__importDefault(require("axios"));
 const random_string_1 = tslib_1.__importDefault(require("random-string"));
+const PanelManager_1 = tslib_1.__importDefault(require("../managers/PanelManager"));
 class InteractionCreate {
     client;
     enabled;
@@ -88,6 +89,41 @@ const handleButtonPress = async (client, interaction) => {
                     });
                 interaction.guild?.channels.create({ name: `ticket-${generateId()}`, parent: panel.ticketParentChannel, permissionOverwrites: [{ type: discord_js_1.OverwriteType.Role, id: interaction.guild.id, deny: [discord_js_1.PermissionFlagsBits.ViewChannel] }, { type: discord_js_1.OverwriteType.Role, id: panel.defaultRole, allow: [discord_js_1.PermissionFlagsBits.ViewChannel] }] }).then(c => {
                     interaction.reply(`${c}`);
+                });
+            }).catch(async (err) => {
+                await interaction.reply({
+                    ephemeral: true,
+                    embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.ERROR, `An error occured. Please contact support.`)]
+                });
+            });
+        }
+        else if (customId.startsWith("send-")) {
+            let parsedPanel = customId.split("-");
+            let action = parsedPanel[0];
+            let panelId = parsedPanel[1];
+            let ticketType = parsedPanel[2];
+            let ticketName = parsedPanel[3];
+            let payload = {
+                method: 'GET',
+                baseURL,
+                url: `/guilds/${interaction.guildId}/panels/${panelId}`,
+                headers: {
+                    'x-auth-token': process.env.TOKEN,
+                    'Content-Type': 'application/json'
+                },
+            };
+            (0, axios_1.default)(payload).then(async (response) => {
+                let panel = response.data.data.data;
+                if (!panel)
+                    return interaction.reply({
+                        ephemeral: true,
+                        embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.ERROR, `An error occured. Please contact support.`)]
+                    });
+                let pm = new PanelManager_1.default(client, interaction.guild, panel);
+                pm.sendEmbed().then(() => {
+                    interaction.reply({ ephemeral: true, embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.SUCCESS, `Successfully sent embed for panel \`${panel.id}\` in <#${panel.embedChannel}>`)] });
+                }).catch(err => {
+                    interaction.reply({ ephemeral: true, embeds: [utils_1.default.embed(utils_1.DiscordEmbedType.ERROR, `Failed to send embed.`)] });
                 });
             }).catch(async (err) => {
                 await interaction.reply({

@@ -283,11 +283,16 @@ router.patch('/:id/panels/:panelId', async (req: Request, res: Response) => {
     const guildId: string = req.params.id
     const panelId: string = req.params.panelId
     const payload: ApiPanelEdit = req.body
+    let anonymous: boolean = false;
+    let isAnonymous = req.headers['x-anonymous']
+    if (!isAnonymous || isAnonymous == "0") anonymous = false;
+    if (isAnonymous == "1") anonymous = true;
 
     if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
     if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
     if (!panelId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
-    if (!payload || !payload.editedBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload.editedBy && !anonymous) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
 
     const apiGuild: Guild | null = await guild.findOne({ id: guildId })
 
@@ -305,7 +310,7 @@ router.patch('/:id/panels/:panelId', async (req: Request, res: Response) => {
 
     apiPanel.save().then((document) => {
         utils.apiResponse(HttpCode.OK, res, document)
-        res.locals.socket.emit("panel_edit", { id: panelId, guildId: guildId, editedBy: payload.editedBy, data: { oldValue: JSON.parse(oldApiPanel), newValue: apiPanel, changedEntries: Object.keys(payload).filter((x: string) => x !== "editedBy") } })
+        res.locals.socket.emit("panel_edit", { id: panelId, guildId: guildId, anonymous, editedBy: payload.editedBy ? payload.editedBy : null, data: { oldValue: JSON.parse(oldApiPanel), newValue: apiPanel, changedEntries: Object.keys(payload).filter((x: string) => x !== "editedBy") } })
     }).catch(err => {
         utils.apiResponse(HttpCode.INTERNAL_SERVER_ERROR, res, err)
     })

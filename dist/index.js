@@ -62,7 +62,8 @@ ios.on("connection", s => {
             return;
         let pm = new PanelManager_1.default(client, guild, data.data.newValue);
         console.log(data.data.newValue);
-        await pm.sendEmbed();
+        if (!data.anonymous && !data.editedBy)
+            await pm.sendEmbed();
         await auditLogger_1.default.logPanelEdit(client, data);
     });
 });

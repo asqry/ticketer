@@ -77,7 +77,7 @@ ios.on("connection", s => {
         let pm = new PanelManager(client, guild, data.data.newValue)
         console.log(data.data.newValue)
 
-        await pm.sendEmbed()
+        if (!data.anonymous && !data.editedBy) await pm.sendEmbed()
         await auditLogger.logPanelEdit(client, data)
     })
 })

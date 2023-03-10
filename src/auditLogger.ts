@@ -31,6 +31,7 @@ export interface PanelEditEntry extends Panel {
     guildId: string
     id: string
     editedBy: string
+    anonymous: boolean
     data: PanelEditEntryData
 
 }

@@ -1,9 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const tslib_1 = require("tslib");
+require("dotenv/config");
 const discord_js_1 = require("discord.js");
 const utils_1 = tslib_1.__importStar(require("../utils"));
 const axios_1 = tslib_1.__importDefault(require("axios"));
+var MakePayloadMethod;
+(function (MakePayloadMethod) {
+    MakePayloadMethod["GET"] = "GET";
+    MakePayloadMethod["POST"] = "POST";
+    MakePayloadMethod["PATCH"] = "PATCH";
+})(MakePayloadMethod || (MakePayloadMethod = {}));
 class PanelManager {
     client;
     guild;
@@ -34,17 +41,22 @@ class PanelManager {
     get messageId() {
         return this.panel.embedMessage;
     }
-    async setMessageId(message) {
-        let payload = {
-            method: "PATCH",
-            baseURL: process.env.API_URL,
-            url: `/guilds/${this.guild.id}/panels/${this.panel.id}`,
-            data: JSON.stringify({ embedMessage: message.id }),
+    makePayload(method, endpoint, data) {
+        let baseURL = process.env.API_URL;
+        return {
+            method,
+            baseURL,
+            url: `/guilds/${this.panel.guildId}${endpoint}`,
             headers: {
                 'x-auth-token': process.env.TOKEN,
-            }
+                'Content-Type': 'application/json',
+                'x-anonymous': 1
+            },
+            data: JSON.stringify(data)
         };
-        (0, axios_1.default)(payload).then(response => {
+    }
+    async setMessageId(message) {
+        (0, axios_1.default)(this.makePayload(MakePayloadMethod.PATCH, `/panels/${this.panel.id}`, { embedMessage: message.id })).then(response => {
             console.log(response);
         }).catch(err => {
             utils_1.default.log(utils_1.Log.ERROR, err);
@@ -62,6 +74,7 @@ class PanelManager {
     async findOldMessage(channel) {
         if (!this.messageId)
             return null;
+        channel.messages.fetch();
         let message = await channel.messages.fetch(this.messageId);
         if (!message)
             return null;
@@ -77,12 +90,16 @@ class PanelManager {
         let emb = { embeds: embed };
         if (this.buildButtons().length > 0)
             emb.components = [row];
-        if (!oldMessage)
+        if (!oldMessage) {
+            console.log("no old message");
             channel.send(emb).then(async (m) => await this.setMessageId(m));
+            return;
+        }
         if (oldMessage && oldMessage?.deletable && oldMessage.embeds !== emb.embeds || oldMessage?.components && oldMessage.components !== emb.components) {
             oldMessage.delete().then(() => {
                 channel.send(emb).then(async (m) => await this.setMessageId(m));
             }).catch(err => {
+                utils_1.default.log(utils_1.Log.ERROR, err);
             });
         }
     }

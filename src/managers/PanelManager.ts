@@ -1,7 +1,15 @@
+import 'dotenv/config'
 import { ActionRow, ActionRowBuilder, APIEmoji, APIMessageComponentEmoji, ButtonBuilder, ButtonComponent, ButtonStyle, Client, Guild, GuildBasedChannel, Message, TextChannel } from "discord.js"
 import utils, { DiscordEmbedType, Log } from "../utils"
 import { ApiTicket, Panel, Ticket } from "../server/models/panel"
 import axios, { AxiosRequestConfig } from "axios"
+
+
+enum MakePayloadMethod {
+    GET = "GET",
+    POST = "POST",
+    PATCH = "PATCH"
+}
 
 export default class PanelManager {
     client: Client
@@ -40,18 +48,24 @@ export default class PanelManager {
         return this.panel.embedMessage
     }
 
-    async setMessageId(message: Message): Promise<void> {
-        let payload: AxiosRequestConfig = {
-            method: "PATCH",
-            baseURL: process.env.API_URL,
-            url: `/guilds/${this.guild.id}/panels/${this.panel.id}`,
-            data: JSON.stringify({ embedMessage: message.id }),
+
+    makePayload(method: MakePayloadMethod, endpoint: string, data?: Object): AxiosRequestConfig {
+        let baseURL = process.env.API_URL
+        return {
+            method,
+            baseURL,
+            url: `/guilds/${this.panel.guildId}${endpoint}`,
             headers: {
                 'x-auth-token': process.env.TOKEN,
-            }
+                'Content-Type': 'application/json',
+                'x-anonymous': 1
+            },
+            data: JSON.stringify(data)
         }
+    }
 
-        axios(payload).then(response => {
+    async setMessageId(message: Message): Promise<void> {
+        axios(this.makePayload(MakePayloadMethod.PATCH, `/panels/${this.panel.id}`, { embedMessage: message.id })).then(response => {
             console.log(response)
         }).catch(err => {
             utils.log(Log.ERROR, err)
@@ -72,8 +86,9 @@ export default class PanelManager {
 
     async findOldMessage(channel: TextChannel): Promise<Message | null> {
         if (!this.messageId) return null;
+        channel.messages.fetch()
         let message: Message | undefined = await channel.messages.fetch(this.messageId)
-        if (!message) return null
+        if (!message) return null;
 
         return message
     }
@@ -81,7 +96,8 @@ export default class PanelManager {
     async sendEmbed(): Promise<void> {
         let channel: GuildBasedChannel | null = this.channel()
         if (!channel) return utils.log(Log.ERROR, "Couldn't find the panel channel")
-        let oldMessage = await this.findOldMessage(channel as TextChannel)
+        let oldMessage: Message | null = await this.findOldMessage(channel as TextChannel)
+
 
         let embed = [utils.embed(DiscordEmbedType.NEUTRAL, `*Click a button below to open a ticket*\n_**${this.tickets.length}** available ticket types_`, { title: this.name, color: this.color, image: { url: this.imageUrl ? this.imageUrl : "" } })]
 
@@ -91,13 +107,18 @@ export default class PanelManager {
         let emb: any = { embeds: embed };
         if (this.buildButtons().length > 0) emb.components = [row];
 
-        if (!oldMessage) (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
+        if (!oldMessage) {
+            console.log("no old message");
+            (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
+
+            return;
+        }
 
         if (oldMessage && oldMessage?.deletable && oldMessage.embeds !== emb.embeds || oldMessage?.components && oldMessage.components !== emb.components) {
             oldMessage.delete().then(() => {
                 (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
             }).catch(err => {
-                // utils.log(Log.ERROR, err)
+                utils.log(Log.ERROR, err)
             })
         }
 
