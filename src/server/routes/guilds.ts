@@ -257,16 +257,15 @@ router.post('/:id/panels/create', async (req: Request, res: Response) => {
 
     if (!isAuthed) return utils.apiResponse(HttpCode.UNAUTHORIZED, res)
     if (!guildId) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
-    if (!payload || !payload.embedChannel || !payload.ticketParentChannel || !payload.createdBy) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
+    if (!payload || !payload.embedChannel || !payload.ticketParentChannel || !payload.createdBy || !payload.defaultRole) return utils.apiResponse(HttpCode.BAD_REQUEST, res)
 
     const apiGuild: Guild | null = await guild.findOne({ id: guildId })
 
     if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
-    if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
+    // if (!apiGuild.support_team_role && !payload.defaultRole) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
 
     payload.id = panelId
     payload.guildId = apiGuild.id
-    if (!payload.defaultRole) payload.defaultRole = apiGuild.support_team_role
 
     let newPanel = new panel(payload)
 
@@ -297,7 +296,7 @@ router.patch('/:id/panels/:panelId', async (req: Request, res: Response) => {
     const apiGuild: Guild | null = await guild.findOne({ id: guildId })
 
     if (!apiGuild) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Guild does not exist.' })
-    if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
+    // if (!apiGuild.support_team_role) return utils.apiResponse(HttpCode.BAD_REQUEST, res, { message: 'You must set the support_team_role option' })
 
     const apiPanel = await panel.findOne({ guildId: guildId, id: panelId })
     if (!apiPanel) return utils.apiResponse(HttpCode.NOT_FOUND, res, { message: 'Panel does not exist.' })

@@ -68,7 +68,7 @@ export default class PanelManager {
         axios(this.makePayload(MakePayloadMethod.PATCH, `/panels/${this.panel.id}`, { embedMessage: message.id })).then(response => {
             console.log(response)
         }).catch(err => {
-            utils.log(Log.ERROR, err)
+            utils.log(Log.ERROR, err.response.data)
         })
     }
 
@@ -84,43 +84,47 @@ export default class PanelManager {
         return t;
     }
 
-    async findOldMessage(channel: TextChannel): Promise<Message | null> {
-        if (!this.messageId) return null;
-        channel.messages.fetch()
-        let message: Message | undefined = await channel.messages.fetch(this.messageId)
-        if (!message) return null;
+    // async findOldMessage(channel: TextChannel): Promise<Message | null> {
+    //     if (!this.messageId) return null;
+    //     channel.messages.fetch()
+    //     let message: Message | undefined = await channel.messages.fetch(this.messageId)
+    //     if (!message) return null;
 
-        return message
-    }
+    //     return message
+    // }
 
     async sendEmbed(): Promise<void> {
         let channel: GuildBasedChannel | null = this.channel()
         if (!channel) return utils.log(Log.ERROR, "Couldn't find the panel channel")
-        let oldMessage: Message | null = await this.findOldMessage(channel as TextChannel)
-
-
         let embed = [utils.embed(DiscordEmbedType.NEUTRAL, `*Click a button below to open a ticket*\n_**${this.tickets.length}** available ticket types_`, { title: this.name, color: this.color, image: { url: this.imageUrl ? this.imageUrl : "" } })]
-
-
         let row = new ActionRowBuilder<ButtonBuilder>().addComponents(this.buildButtons())
 
         let emb: any = { embeds: embed };
         if (this.buildButtons().length > 0) emb.components = [row];
 
-        if (!oldMessage) {
-            console.log("no old message");
-            (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
+        if (!this.messageId) return;
+        (channel as TextChannel).messages.fetch(this.messageId).then((oldMessage: Message) => {
+            if (!oldMessage) {
+                (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
 
-            return;
-        }
+                return
+            }
 
-        if (oldMessage && oldMessage?.deletable && oldMessage.embeds !== emb.embeds || oldMessage?.components && oldMessage.components !== emb.components) {
             oldMessage.delete().then(() => {
                 (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
             }).catch(err => {
                 utils.log(Log.ERROR, err)
             })
-        }
+
+        }).catch(err => {
+            console.log("no old message");
+            (channel as TextChannel).send(emb).then(async (m: Message) => await this.setMessageId(m))
+
+            return;
+        })
+
+
+
 
     }
 

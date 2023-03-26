@@ -1,6 +1,6 @@
 import "dotenv/config"
 import axios, { AxiosRequestConfig } from "axios";
-import { ActionRowBuilder, ApplicationCommandOptionType, AutocompleteInteraction, ButtonBuilder, ButtonStyle, Client, CommandInteraction } from "discord.js";
+import { ActionRowBuilder, ApplicationCommandOptionType, AutocompleteInteraction, ButtonBuilder, ButtonStyle, ChannelType, Client, CommandInteraction, ModalActionRowComponentBuilder, ModalBuilder, SlashCommandAttachmentOption, TextInputBuilder, TextInputStyle } from "discord.js";
 import { Command } from "../interfaces/command";
 import utils, { DiscordEmbedOptions, DiscordEmbedType } from "../utils";
 import { Panel as PanelModel } from "../server/models/panel";
@@ -33,6 +33,54 @@ export const Panel: Command = {
             type: ApplicationCommandOptionType.Subcommand,
             name: 'create',
             description: "Create a new ticket panel",
+            options: [
+                {
+                    type: ApplicationCommandOptionType.Channel,
+                    name: 'embed_channel',
+                    channel_types: [ChannelType.GuildText],
+                    description: "The channel where your panel will be sent",
+                    required: true,
+                },
+                {
+                    type: ApplicationCommandOptionType.Channel,
+                    name: 'ticket_category',
+                    channel_types: [ChannelType.GuildCategory],
+                    description: 'The category your tickets will be created under',
+                    required: true
+                },
+
+                {
+                    type: ApplicationCommandOptionType.String,
+                    name: 'embed_message',
+                    description: 'The message that will show up in the panel embed',
+                    required: true,
+                },
+                {
+                    type: ApplicationCommandOptionType.Role,
+                    name: 'default_role',
+                    description: 'The role that will have access to all tickets made from this panel.',
+                    required: true
+                },
+                {
+                    type: ApplicationCommandOptionType.Role,
+                    name: 'raised_role',
+                    description: 'The role that will have access to all raised tickets made from this panel.',
+                    required: false
+                },
+                {
+                    type: ApplicationCommandOptionType.String,
+                    max_length: 7,
+                    name: 'embed_color',
+                    description: 'The color of the panel embed. Please use HEX format (#7289DA)',
+                    required: false
+                },
+                {
+                    type: ApplicationCommandOptionType.Attachment,
+                    name: 'embed_image',
+                    description: 'The large image that will show in the panel embed. Recommended dimensions: 1500px x 800px',
+                    required: false
+                }
+            ]
         }
     ],
     run(client: Client, interaction: CommandInteraction) {
@@ -80,7 +128,7 @@ export const Panel: Command = {
                 embedOptions.fields?.push({ name: 'Raised Role', value: `${panel.raisedRole ? replace['role'].replace(/\[id\]/gim, panel.raisedRole) : "None"}`, inline: true })
                 embedOptions.fields?.push({ name: '\u200b', value: '\u200b', inline: true })
                 embedOptions.fields?.push({ name: 'Channel', value: `${replace['channel'].replace(/\[id\]/gim, panel.embedChannel)}`, inline: true })
-                if (panelCategory) embedOptions.fields?.push({ name: 'Tickets Open In', value: `<:Dropdown:1033200954830508032> ${panelCategory.name}`, inline: true })
+                if (panelCategory) embedOptions.fields?.push({ name: 'Tickets Open In', value: `📁 ${panelCategory.name}`, inline: true })
 
                 let embed = utils.embed(DiscordEmbedType.NEUTRAL, `Viewing panel \`${panel.name}\` *(${panel.id})*\n\n**Tickets**\n${panel.ticketTypes.map(t => `\`  ${t.emoji} ${t.name}  \` *type: ${t.type}*\n`).join("")}`, embedOptions)
 
@@ -112,6 +160,10 @@ export const Panel: Command = {
             }).catch(err => {
                 interaction.reply({ ephemeral: true, embeds: [utils.embed(DiscordEmbedType.ERROR, `This server has no panels. Run </panel create:${interaction.commandId}> to create one.`)] })
             })
+
+        } else if (subCommand.name === "create") {
+            console.log(interaction.options.get("embed_image", false))
+
 
         }
     },
